@@ -1,0 +1,2 @@
+# eosio.faucet
+EOSIO Faucet
