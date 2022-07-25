@@ -1,11 +1,18 @@
 # Prerequisites
 *.d
+.vscode
+nodeos
+stderr
 
 # Compiled Object files
 *.slo
 *.lo
 *.o
 *.obj
+*.abi
+*.wasm
+
+!include/**
 
 # Precompiled Headers
 *.gch
