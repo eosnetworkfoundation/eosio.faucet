@@ -8,8 +8,6 @@
 [[eosio::action]]
 void faucet::send( const name to )
 {
-    require_auth( get_self() );
-
     faucet::ratelimit_table _ratelimit( get_self(), get_self().value );
     const time_point_sec now = current_time_point();
     auto insert = [&]( auto& row ) {
@@ -32,7 +30,6 @@ void faucet::send( const name to )
 [[eosio::action]]
 void faucet::create( const name account, const public_key key )
 {
-    require_auth( get_self() );
     create_account( account, key );
 }
 
