@@ -31,6 +31,7 @@ void faucet::send( const name to )
 void faucet::create( const name account, const public_key key )
 {
     create_account( account, key );
+    send( account );
 }
 
 // @debug
@@ -65,6 +66,10 @@ void faucet::create_account( const name account, const public_key key )
     eosiosystem::native::newaccount_action newaccount( "eosio"_n, { get_self(), "active"_n } );
     eosiosystem::system_contract::buyrambytes_action buyrambytes( "eosio"_n, { get_self(), "active"_n });
     eosiosystem::system_contract::delegatebw_action delegatebw( "eosio"_n, { get_self(), "active"_n });
+
+    // send assets
+    const asset balance = token::get_balance( TOKEN, get_self(), EOS.code() );
+    check( balance.amount >= QUANTITY.amount + RAM + NET.amount + CPU.amount, "faucet::send: is empty, please contact administrator");
 
     newaccount.send( get_self(), account, owner, owner );
     buyrambytes.send( get_self(), account, RAM );
