@@ -77,7 +77,7 @@ public:
      * ### params
      *
      * - `{name} account` - account to be created
-     * - `{public_key} key` - public account to use as active/owner permission
+     * - `{public_key} key` - EOSIO public key to be used as active/owner permission
      *
      * ### Example
      *
