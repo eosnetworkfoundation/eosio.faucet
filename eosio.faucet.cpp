@@ -6,7 +6,7 @@
 #include "eosio.faucet.hpp"
 
 [[eosio::action]]
-void faucet::send( const string to )
+void faucet::send( const string to, const optional<uint64_t> nonce )
 {
     // send EOS tokens to EOS or EVM account
     if ( to.length() <= 12 ) send_eos( name{to} );
@@ -57,7 +57,7 @@ void faucet::send_eos( const name to )
 void faucet::create( const name account, const public_key key )
 {
     create_account( account, key );
-    send( account.to_string() );
+    send( account.to_string(), {});
 }
 
 // @debug

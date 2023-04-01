@@ -86,12 +86,12 @@ public:
      * ### Example
      *
      * ```bash
-     * $ cleos push action eosio.faucet send '["myaccount"]' -p anyaccount
-     * $ cleos push action eosio.faucet send '["0xaa2F34E41B397aD905e2f48059338522D05CA534"]' -p anyaccount
+     * $ cleos push action eosio.faucet send '["myaccount", null]' -p anyaccount
+     * $ cleos push action eosio.faucet send '["0xaa2F34E41B397aD905e2f48059338522D05CA534", null]' -p anyaccount
      * ```
      */
     [[eosio::action]]
-    void send( const string to );
+    void send( const string to, const optional<uint64_t> nonce );
 
     /**
      * ## ACTION `create`
