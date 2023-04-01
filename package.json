@@ -1,0 +1,16 @@
+{
+    "private": true,
+    "name": "eosio.faucet",
+    "version": "0.1.0",
+    "description": "EOSIO Faucet",
+    "license": "MIT OR Apache-2.0",
+    "type": "module",
+    "scripts": {
+      "build": "blanc++ eosio.faucet.cpp -I include",
+      "release": "cdt-cpp eosio.faucet.cpp -I include",
+      "test": "node *.spec.js"
+    },
+    "devDependencies": {
+      "@proton/vert": "*"
+    }
+  }

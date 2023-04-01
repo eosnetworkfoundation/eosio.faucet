@@ -3,6 +3,7 @@
 .vscode
 nodeos
 stderr
+node_modules
 
 # Compiled Object files
 *.slo

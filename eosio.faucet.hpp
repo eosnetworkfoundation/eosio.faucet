@@ -17,12 +17,12 @@ public:
     // CONSTANTS
     const name TOKEN = "eosio.token"_n;
     const symbol EOS = symbol{"EOS", 4};
-    const asset QUANTITY = asset{100'0000, EOS};
+    const asset QUANTITY = asset{1'0100, EOS};
     const asset NET = asset{1'0000, EOS};
-    const asset CPU = asset{100'0000, EOS};
+    const asset CPU = asset{1'0000, EOS};
     const uint32_t RAM = 8000;
-    const uint32_t DAY = 86400; // 24 hours
-    const string MEMO = "received by EOSIO faucet";
+    const uint32_t TIMEOUT = 1; // 1 seconds
+    const string MEMO = "received by https://faucet.testnet.evm.eosnetwork.com";
 
     /**
      * ## TABLE `ratelimit`
@@ -48,6 +48,31 @@ public:
     typedef eosio::multi_index< "ratelimit"_n, ratelimit_row > ratelimit_table;
 
     /**
+     * ## TABLE `history`
+     *
+     * - `{name} to` - receiver account
+     * - `{time_point_sec} next` - next available send
+     *
+     * ### example
+     *
+     * ```json
+     * {
+     *     "id": 1,
+     *     "receiver": "0xaa2F34E41B397aD905e2f48059338522D05CA534",
+     *     "timestamp": "2022-07-24T00:00:00"
+     * }
+     * ```
+     */
+    struct [[eosio::table("history")]] history_row {
+        uint64_t            id;
+        string              receiver;
+        time_point_sec      timestamp;
+
+        uint64_t primary_key() const { return id; }
+    };
+    typedef eosio::multi_index< "history"_n, history_row > history_table;
+
+    /**
      * ## ACTION `send`
      *
      * > Send tokens to {{to}} receiver account.
@@ -56,16 +81,17 @@ public:
      *
      * ### params
      *
-     * - `{name} to` - receiver account
+     * - `{string} to` - receiver account (EOS or EVM)
      *
      * ### Example
      *
      * ```bash
-     * $ cleos push action eosio.faucet send '[myaccount]' -p anyaccount
+     * $ cleos push action eosio.faucet send '["myaccount"]' -p anyaccount
+     * $ cleos push action eosio.faucet send '["0xaa2F34E41B397aD905e2f48059338522D05CA534"]' -p anyaccount
      * ```
      */
     [[eosio::action]]
-    void send( const name to );
+    void send( const string to );
 
     /**
      * ## ACTION `create`
@@ -103,4 +129,7 @@ private :
     void create_account( const name account, const public_key key );
 
     void transfer( const name from, const name to, const extended_asset value, const string& memo );
+
+    void send_evm( const string to );
+    void send_eos( const name to );
 };

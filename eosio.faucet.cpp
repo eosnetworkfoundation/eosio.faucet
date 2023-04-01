@@ -6,12 +6,38 @@
 #include "eosio.faucet.hpp"
 
 [[eosio::action]]
-void faucet::send( const name to )
+void faucet::send( const string to )
+{
+    // send EOS tokens to EOS or EVM account
+    if ( to.length() <= 12 ) send_eos( name{to} );
+    else send_evm( to );
+
+    // track history
+    faucet::history_table history( get_self(), get_self().value );
+    auto insert = [&]( auto& row ) {
+        row.id = history.available_primary_key();
+        row.receiver = to;
+        row.timestamp = current_time_point();
+    };
+    history.emplace( get_self(), insert );
+}
+
+void faucet::send_evm( const string to )
+{
+    const asset balance = token::get_balance( TOKEN, get_self(), EOS.code() );
+    check( balance >= QUANTITY, "faucet::send: is empty, please contact administrator");
+    transfer( get_self(), "eosio.evm"_n, {QUANTITY, TOKEN}, to);
+}
+
+void faucet::send_eos( const name to )
 {
     faucet::ratelimit_table _ratelimit( get_self(), get_self().value );
     const time_point_sec now = current_time_point();
+
+    check( is_account( to ), "faucet::send: [to] account does not exist" );
+
     auto insert = [&]( auto& row ) {
-        check( row.send_at + DAY <= now, "faucet::send: must wait 24 hours");
+        check( row.send_at + TIMEOUT <= now, "faucet::send: must wait 30 seconds");
         row.to = to;
         row.send_at = now;
     };
@@ -31,7 +57,7 @@ void faucet::send( const name to )
 void faucet::create( const name account, const public_key key )
 {
     create_account( account, key );
-    send( account );
+    send( account.to_string() );
 }
 
 // @debug
