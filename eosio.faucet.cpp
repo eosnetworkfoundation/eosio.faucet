@@ -25,7 +25,7 @@ void faucet::send( const string to, const optional<uint64_t> nonce )
 void faucet::send_evm( const string to )
 {
     const asset balance = token::get_balance( TOKEN, get_self(), EOS.code() );
-    check( balance >= QUANTITY, "faucet::send: is empty, please contact administrator");
+    check( balance >= QUANTITY, "eosio.faucet is empty, please contact administrator");
     transfer( get_self(), "eosio.evm"_n, {QUANTITY, TOKEN}, to);
 }
 
@@ -34,10 +34,10 @@ void faucet::send_eos( const name to )
     faucet::ratelimit_table _ratelimit( get_self(), get_self().value );
     const time_point_sec now = current_time_point();
 
-    check( is_account( to ), "faucet::send: [to] account does not exist" );
+    check( is_account( to ), to.to_string() + " account does not exist" );
 
     auto insert = [&]( auto& row ) {
-        check( row.send_at + TIMEOUT <= now, "faucet::send: must wait 30 seconds");
+        check( row.send_at + TIMEOUT <= now, "eosio.faucet must wait " + to_string(TIMEOUT) + " seconds");
         row.to = to;
         row.send_at = now;
     };
@@ -49,7 +49,7 @@ void faucet::send_eos( const name to )
 
     // send assets
     const asset balance = token::get_balance( TOKEN, get_self(), EOS.code() );
-    check( balance >= QUANTITY, "faucet::send: is empty, please contact administrator");
+    check( balance >= QUANTITY, "eosio.faucet is empty, please contact administrator");
     transfer( get_self(), to, {QUANTITY, TOKEN}, MEMO);
 }
 
@@ -80,9 +80,11 @@ void faucet::cleartable( const name table_name, const optional<name> scope, cons
 
     // tables
     faucet::ratelimit_table _ratelimit( get_self(), value );
+    faucet::history_table _history( get_self(), value );
 
     if (table_name == "ratelimit"_n) clear_table( _ratelimit, rows_to_clear );
-    else check(false, "eosio.faucet::cleartable: [table_name] unknown table to clear" );
+    else if (table_name == "history"_n) clear_table( _history, rows_to_clear );
+    else check(false, "eosio.faucet [table_name] unknown table to clear" );
 }
 
 void faucet::create_account( const name account, const public_key key )
@@ -95,7 +97,7 @@ void faucet::create_account( const name account, const public_key key )
 
     // send assets
     const asset balance = token::get_balance( TOKEN, get_self(), EOS.code() );
-    check( balance.amount >= QUANTITY.amount + RAM + NET.amount + CPU.amount, "faucet::send: is empty, please contact administrator");
+    check( balance.amount >= QUANTITY.amount + RAM + NET.amount + CPU.amount, "eosio.faucet is empty, please contact administrator");
 
     newaccount.send( get_self(), account, owner, owner );
     buyrambytes.send( get_self(), account, RAM );
