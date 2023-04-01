@@ -30,7 +30,7 @@ describe('eosio.faucet', () => {
 
   it("error: account does not exists", async () => {
     const action = contract.actions.send(["invalid"]).send();
-    await expectToThrow(action, /faucet::send: [to] account does not exist/);
+    await expectToThrow(action, "faucet::send: [to] account does not exist");
   });
 });
 
