@@ -1,5 +1,9 @@
 # EOSIO Faucet
 
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/eosnetworkfoundation/eosio.faucet/blob/main/LICENSE-MIT)
+[![Antelope CDT](https://github.com/eosnetworkfoundation/eosio.faucet/actions/workflows/release.yml/badge.svg)](https://github.com/eosnetworkfoundation/eosio.faucet/actions/workflows/release.yml)
+[![Blanc++ Vert](https://github.com/eosnetworkfoundation/eosio.faucet/actions/workflows/ci.yml/badge.svg)](https://github.com/eosnetworkfoundation/eosio.faucet/actions/workflows/ci.yml)
+
 > Faucet to create account & send tokens to receiver account.
 
 ## Quickstart
