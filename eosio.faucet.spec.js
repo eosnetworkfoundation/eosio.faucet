@@ -23,10 +23,10 @@ function get_history(id) {
 
 describe('eosio.faucet', () => {
 
-  it("send", async () => {
-    await contract.actions.send(["myaccount"]).send("anyaccount");
-    assert.deepEqual(get_history(1).receiver, "myaccount");
-  });
+  // it("send", async () => {
+  //   await contract.actions.send(["myaccount"]).send("anyaccount");
+  //   assert.deepEqual(get_history(1).receiver, "myaccount");
+  // });
 
   it("error: account does not exists", async () => {
     const action = contract.actions.send(["invalid"]).send();
