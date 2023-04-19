@@ -23,3 +23,19 @@ icon: https://gateway.pinata.cloud/ipfs/QmSPLWbpUttHQqd4gPnPKBGE6XWy6PricPgfns9L
 spec_version: "0.2.0"
 title: cleartable
 ---
+
+
+<h1 class="contract">test</h1>
+
+---
+spec_version: "0.2.0"
+title: test
+---
+
+
+<h1 class="contract">nonce</h1>
+
+---
+spec_version: "0.2.0"
+title: nonce
+---

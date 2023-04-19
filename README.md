@@ -10,7 +10,7 @@
 
 ```bash
 # create
-cleos push action eosio.faucet create '[myaccount, "EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV"]' -p eosio.faucet
+cleos push action eosio.faucet create '[myaccount, "PUB_K1_7hg8uP17qWQcF4m2L9x2gwGSGA2wiHERJGSgDLXSHcYm96yxmK"]' -p eosio.faucet
 
 # send tokens (EOS or EVM)
 cleos push action eosio.faucet send '["myaccount"]' -p eosio.faucet
