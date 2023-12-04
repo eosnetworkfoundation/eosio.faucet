@@ -8,15 +8,16 @@
 [[eosio::action]]
 void faucet::send( const string to )
 {
-    // send EOS tokens to EOS or EVM account
-    if ( to.length() <= 12 ) send_eos( to );
-    else send_evm( to );
-
     // track history
     add_history( to );
     prune_history();
-    prune_rate_limit();
+    prune_rate_limits();
+    prune_rate_limit( to );
     add_stats();
+
+    // send EOS tokens to EOS or EVM account
+    if ( to.length() <= 12 ) send_eos( to );
+    else send_evm( to );
 
 }
 
@@ -36,9 +37,10 @@ void faucet::create( const name account, const public_key key )
 void faucet::test( const string address )
 {
     require_auth( get_self() );
-    add_ratelimit(address);
     prune_history();
-    prune_rate_limit();
+    prune_rate_limit(address);
+    prune_rate_limits();
+    add_ratelimit(address);
 }
 
 void faucet::prune_history()
@@ -59,7 +61,21 @@ void faucet::prune_history()
     }
 }
 
-void faucet::prune_rate_limit()
+void faucet::prune_rate_limit( const string address )
+{
+    faucet::ratelimit_table _ratelimit( get_self(), get_self().value );
+    auto idx = _ratelimit.get_index<"by.address"_n>();
+    auto it = idx.find(to_checksum(address));
+    if ( !it->address.length() ) return;
+
+    const int64_t now = current_time_point().sec_since_epoch();
+    const int64_t timestamp = it->last_send_time.sec_since_epoch();
+    if ( timestamp < (now - TTL_RATE_LIMIT) ) {
+        idx.erase( it );
+    }
+}
+
+void faucet::prune_rate_limits()
 {
     faucet::ratelimit_table ratelimit( get_self(), get_self().value );
     int count = 0;
@@ -112,12 +128,6 @@ uint64_t faucet::add_ratelimit( const string address )
 
     auto insert = [&]( auto& row ) {
         const int64_t now = current_time_point().sec_since_epoch();
-        // reset last timestamp if exceeds TTL
-        if ( TTL_RATE_LIMIT < (now - row.last_send_time.sec_since_epoch()) ) {
-            row.last_send_time = current_time_point();
-            row.counter = 0;
-        }
-
         const int64_t last = row.last_send_time.sec_since_epoch();
         const int64_t diff = now - last;
         check(diff >= TIMEOUT, "eosio.faucet must wait " + to_string(TIMEOUT) + " seconds");
@@ -149,7 +159,6 @@ void faucet::send_eos( const string address )
 {
     const uint64_t counter = add_ratelimit( address );
     const name account = name{address};
-    const time_point_sec now = current_time_point();
     check( is_account( account ), account.to_string() + " account does not exist" );
 
     // send assets

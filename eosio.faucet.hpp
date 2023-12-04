@@ -185,7 +185,8 @@ private :
     void send_eos( const string address );
     uint64_t add_ratelimit( const string address );
     void add_history( const string address );
-    void prune_rate_limit();
+    void prune_rate_limits();
+    void prune_rate_limit( const string address );
     void prune_history();
     void add_stats();
 };
