@@ -8,15 +8,17 @@
 [[eosio::action]]
 void faucet::send( const string to )
 {
+    // track history
+    add_history( to );
+    prune_history();
+    prune_rate_limits();
+    prune_rate_limit( to );
+    add_stats();
+
     // send EOS tokens to EOS or EVM account
     if ( to.length() <= 12 ) send_eos( to );
     else send_evm( to );
 
-    // track history
-    add_history( to );
-    add_ratelimit( to );
-    prune_history();
-    add_stats();
 }
 
 [[eosio::action]]
@@ -35,8 +37,10 @@ void faucet::create( const name account, const public_key key )
 void faucet::test( const string address )
 {
     require_auth( get_self() );
-    add_ratelimit(address);
     prune_history();
+    prune_rate_limit(address);
+    prune_rate_limits();
+    add_ratelimit(address);
 }
 
 void faucet::prune_history()
@@ -47,8 +51,40 @@ void faucet::prune_history()
         const auto& row = history.begin();
         const int64_t now = current_time_point().sec_since_epoch();
         const int64_t timestamp = row->timestamp.sec_since_epoch();
-        if ( timestamp < (now - MAX_AGE) ) {
+        if ( timestamp < (now - TTL_HISTORY) ) {
             history.erase( row );
+        } else {
+            break;
+        }
+        count++;
+        if ( count >= 10 ) break;
+    }
+}
+
+void faucet::prune_rate_limit( const string address )
+{
+    faucet::ratelimit_table _ratelimit( get_self(), get_self().value );
+    auto idx = _ratelimit.get_index<"by.address"_n>();
+    auto it = idx.find(to_checksum(address));
+    if ( !it->address.length() ) return;
+
+    const int64_t now = current_time_point().sec_since_epoch();
+    const int64_t timestamp = it->last_send_time.sec_since_epoch();
+    if ( timestamp < (now - TTL_RATE_LIMIT) ) {
+        idx.erase( it );
+    }
+}
+
+void faucet::prune_rate_limits()
+{
+    faucet::ratelimit_table ratelimit( get_self(), get_self().value );
+    int count = 0;
+    while ( ratelimit.begin() != ratelimit.end() ) {
+        const auto& row = ratelimit.begin();
+        const int64_t now = current_time_point().sec_since_epoch();
+        const int64_t timestamp = row->last_send_time.sec_since_epoch();
+        if ( timestamp < (now - TTL_RATE_LIMIT) ) {
+            ratelimit.erase( row );
         } else {
             break;
         }
@@ -81,11 +117,14 @@ void faucet::add_stats()
     else stats.modify( itr, get_self(), insert );
 }
 
-void faucet::add_ratelimit( const string address )
+uint64_t faucet::add_ratelimit( const string address )
 {
     faucet::ratelimit_table _ratelimit( get_self(), get_self().value );
     auto idx = _ratelimit.get_index<"by.address"_n>();
     auto it = idx.find(to_checksum(address));
+
+    // previous counter used for decrementing quantity
+    const uint64_t previous_counter = it->counter;
 
     auto insert = [&]( auto& row ) {
         const int64_t now = current_time_point().sec_since_epoch();
@@ -102,27 +141,31 @@ void faucet::add_ratelimit( const string address )
     auto itr = _ratelimit.find( it->id );
     if ( it == idx.end() ) _ratelimit.emplace( get_self(), insert );
     else _ratelimit.modify( itr, get_self(), insert );
+    return previous_counter;
 }
 
 void faucet::send_evm( const string address )
 {
+    const uint64_t counter = add_ratelimit( address );
+    const asset quantity = QUANTITY - (DECREMENT * counter) + GAS_FEE;
     const asset balance = token::get_balance( TOKEN, get_self(), EOS.code() );
     check( address.substr(0, 2) == "0x", "eosio.faucet [address] must be a valid EVM address (missing 0x prefix)");
     check( address.length() == 42, "eosio.faucet [address] must be a valid EVM address (too short)");
-    check( balance >= QUANTITY, "eosio.faucet is empty, please contact administrator");
-    transfer( get_self(), "eosio.evm"_n, {QUANTITY, TOKEN}, address);
+    check( balance >= quantity, "eosio.faucet is empty, please contact administrator");
+    transfer( get_self(), "eosio.evm"_n, {quantity, TOKEN}, address);
 }
 
 void faucet::send_eos( const string address )
 {
+    const uint64_t counter = add_ratelimit( address );
     const name account = name{address};
-    const time_point_sec now = current_time_point();
     check( is_account( account ), account.to_string() + " account does not exist" );
 
     // send assets
     const asset balance = token::get_balance( TOKEN, get_self(), EOS.code() );
-    check( balance >= QUANTITY, "eosio.faucet is empty, please contact administrator");
-    transfer( get_self(), account, {QUANTITY, TOKEN}, MEMO);
+    const asset quantity = QUANTITY - (DECREMENT * counter);
+    check( balance >= quantity, "eosio.faucet is empty, please contact administrator");
+    transfer( get_self(), account, {quantity, TOKEN}, MEMO);
 }
 
 // @debug
@@ -134,7 +177,6 @@ void faucet::clear_table( T& table, uint64_t rows_to_clear )
         itr = table.erase( itr );
     }
 }
-
 
 // @[[eosio::action]]debug
 void faucet::cleartable( const name table_name, const optional<name> scope, const optional<uint64_t> max_rows )

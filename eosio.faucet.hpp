@@ -18,13 +18,16 @@ public:
     // CONSTANTS
     const name TOKEN = "eosio.token"_n;
     const symbol EOS = symbol{"EOS", 4};
-    const asset QUANTITY = asset{1'0100, EOS};
+    const asset QUANTITY = asset{1'0000, EOS};
+    const asset DECREMENT = asset{0'1000, EOS};
+    const asset GAS_FEE = asset{0'0100, EOS};
     const asset NET = asset{1'0000, EOS};
     const asset CPU = asset{1'0000, EOS};
     const uint32_t RAM = 8000;
-    const uint32_t TIMEOUT = 1; // 1 seconds
-    const uint32_t MAX_AGE = 3600; // 60 minutes
-    const uint32_t MAX_RECEIVED = 1000; // max received
+    const uint32_t TIMEOUT = 60; // 1 minute
+    const uint32_t TTL_HISTORY = 600; // 1 hour
+    const uint32_t TTL_RATE_LIMIT = 86400; // 24 hours
+    const uint32_t MAX_RECEIVED = 10; // max received
     const string MEMO = "received by https://faucet.testnet.evm.eosnetwork.com";
 
     /**
@@ -180,8 +183,10 @@ private :
 
     void send_evm( const string address );
     void send_eos( const string address );
-    void add_ratelimit( const string address );
+    uint64_t add_ratelimit( const string address );
     void add_history( const string address );
+    void prune_rate_limits();
+    void prune_rate_limit( const string address );
     void prune_history();
     void add_stats();
 };
