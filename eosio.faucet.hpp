@@ -15,20 +15,30 @@ class [[eosio::contract("eosio.faucet")]] faucet : public eosio::contract {
 public:
     using contract::contract;
 
-    // CONSTANTS
+    // Token Transfer
     const name TOKEN = "eosio.token"_n;
     const symbol EOS = symbol{"EOS", 4};
-    const asset QUANTITY = asset{1'0000, EOS};
-    const asset DECREMENT = asset{0'1000, EOS};
-    const asset GAS_FEE = asset{0'0100, EOS};
+    const asset QUANTITY = asset{10000, EOS};           // (1.0000 EOS)
+    const asset QUANTITY_DECREMENT = asset{1000, EOS};  // (0.1 EOS) decrement amount per counter
+    const asset GAS_FEE = asset{100, EOS};              // (0.01 EOS)
+    const string MEMO = "received by https://faucet.testnet.evm.eosnetwork.com";
+
+    // Account creation
     const asset NET = asset{1'0000, EOS};
     const asset CPU = asset{1'0000, EOS};
     const uint32_t RAM = 8000;
-    const uint32_t TIMEOUT = 60; // 1 minute
-    const uint32_t TTL_HISTORY = 600; // 1 hour
-    const uint32_t TTL_RATE_LIMIT = 86400; // 24 hours
-    const uint32_t MAX_RECEIVED = 10; // max received
-    const string MEMO = "received by https://faucet.testnet.evm.eosnetwork.com";
+
+    // Stats
+    const uint32_t STATS_INTERVAL = 3600;               // 1 hour
+
+    // Data pruning
+    const uint32_t TTL_HISTORY = 86400 * 7;             // 7 days
+    const uint32_t TTL_USER_RATE_LIMIT = 86400;         // 24 hours
+
+    // Rate limits
+    const uint32_t TIMEOUT = 60;                    // (1 minute) timeout resets user's counter allocation
+    const uint32_t MAX_COUNTER_PER_USER = 10;       // max rate limit per user counters (resests by TTL_USER_RATE_LIMIT)
+    const uint32_t MAX_COUNTER_PER_GLOBAL = 5000;   // max rate limit per global counters (resets by STATS_INTERVAL)
 
     /**
      * ## TABLE `ratelimit`
@@ -181,8 +191,9 @@ private :
 
     void transfer( const name from, const name to, const extended_asset value, const string& memo );
 
-    void send_evm( const string address );
     void send_eos( const string address );
+    void send_eos_evm( const string address );
+    void send_eos_native( const string address );
     uint64_t add_ratelimit( const string address );
     void add_history( const string address );
     void prune_rate_limits();

@@ -14,11 +14,14 @@ void faucet::send( const string to )
     prune_rate_limits();
     prune_rate_limit( to );
     add_stats();
+    send_eos( to );
+}
 
+void faucet::send_eos( const string address )
+{
     // send EOS tokens to EOS or EVM account
-    if ( to.length() <= 12 ) send_eos( to );
-    else send_evm( to );
-
+    if ( address.length() <= 12 ) send_eos_native( address );
+    else send_eos_evm( address );
 }
 
 [[eosio::action]]
@@ -37,10 +40,11 @@ void faucet::create( const name account, const public_key key )
 void faucet::test( const string address )
 {
     require_auth( get_self() );
-    prune_history();
-    prune_rate_limit(address);
-    prune_rate_limits();
-    add_ratelimit(address);
+    send_eos( address );
+    // prune_history();
+    // prune_rate_limit(address);
+    // prune_rate_limits();
+    // add_ratelimit(address);
 }
 
 void faucet::prune_history()
@@ -70,7 +74,7 @@ void faucet::prune_rate_limit( const string address )
 
     const int64_t now = current_time_point().sec_since_epoch();
     const int64_t timestamp = it->last_send_time.sec_since_epoch();
-    if ( timestamp < (now - TTL_RATE_LIMIT) ) {
+    if ( timestamp < (now - TTL_USER_RATE_LIMIT) ) {
         idx.erase( it );
     }
 }
@@ -83,7 +87,7 @@ void faucet::prune_rate_limits()
         const auto& row = ratelimit.begin();
         const int64_t now = current_time_point().sec_since_epoch();
         const int64_t timestamp = row->last_send_time.sec_since_epoch();
-        if ( timestamp < (now - TTL_RATE_LIMIT) ) {
+        if ( timestamp < (now - TTL_USER_RATE_LIMIT) ) {
             ratelimit.erase( row );
         } else {
             break;
@@ -107,10 +111,11 @@ void faucet::add_history( const string address )
 void faucet::add_stats()
 {
     faucet::stats_table stats( get_self(), get_self().value );
-    const int64_t current = (current_time_point().sec_since_epoch() / 3600) * 3600;
+    const int64_t current = (current_time_point().sec_since_epoch() / STATS_INTERVAL) * STATS_INTERVAL;
     auto insert = [&]( auto& row ) {
         row.timestamp = time_point_sec(current);
         row.counter += 1;
+        check( row.counter <= MAX_COUNTER_PER_GLOBAL, "eosio.faucet has reached the global maximum allocation of tokens");
     };
     auto itr = stats.find( current );
     if ( itr == stats.end() ) stats.emplace( get_self(), insert );
@@ -131,7 +136,7 @@ uint64_t faucet::add_ratelimit( const string address )
         const int64_t last = row.last_send_time.sec_since_epoch();
         const int64_t diff = now - last;
         check(diff >= TIMEOUT, "eosio.faucet must wait " + to_string(TIMEOUT) + " seconds");
-        check(row.counter < MAX_RECEIVED, "eosio.faucet account has received the maximum allocation of tokens");
+        check(row.counter < MAX_COUNTER_PER_USER, "eosio.faucet address has received the maximum allocation of tokens");
 
         if (it == idx.end() ) row.id = _ratelimit.available_primary_key();
         row.address = address;
@@ -144,18 +149,21 @@ uint64_t faucet::add_ratelimit( const string address )
     return previous_counter;
 }
 
-void faucet::send_evm( const string address )
+void faucet::send_eos_evm( const string address )
 {
     const uint64_t counter = add_ratelimit( address );
-    const asset quantity = QUANTITY - (DECREMENT * counter) + GAS_FEE;
+    const asset quantity = QUANTITY - (QUANTITY_DECREMENT * counter) + GAS_FEE;
     const asset balance = token::get_balance( TOKEN, get_self(), EOS.code() );
+
+    // user rate limit
+    check( quantity.amount > 0, "eosio.faucet address has reached the maximum allocation of tokens");
     check( address.substr(0, 2) == "0x", "eosio.faucet [address] must be a valid EVM address (missing 0x prefix)");
     check( address.length() == 42, "eosio.faucet [address] must be a valid EVM address (too short)");
     check( balance >= quantity, "eosio.faucet is empty, please contact administrator");
     transfer( get_self(), "eosio.evm"_n, {quantity, TOKEN}, address);
 }
 
-void faucet::send_eos( const string address )
+void faucet::send_eos_native( const string address )
 {
     const uint64_t counter = add_ratelimit( address );
     const name account = name{address};
@@ -163,7 +171,8 @@ void faucet::send_eos( const string address )
 
     // send assets
     const asset balance = token::get_balance( TOKEN, get_self(), EOS.code() );
-    const asset quantity = QUANTITY - (DECREMENT * counter);
+    const asset quantity = QUANTITY - (QUANTITY_DECREMENT * counter);
+    check( quantity.amount > 0, "eosio.faucet address has reached the maximum allocation of tokens");
     check( balance >= quantity, "eosio.faucet is empty, please contact administrator");
     transfer( get_self(), account, {quantity, TOKEN}, MEMO);
 }
