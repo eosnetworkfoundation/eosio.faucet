@@ -135,7 +135,7 @@ uint64_t faucet::add_ratelimit( const string address )
         const int64_t now = current_time_point().sec_since_epoch();
         const int64_t last = row.last_send_time.sec_since_epoch();
         const int64_t diff = now - last;
-        check(diff >= TIMEOUT, "eosio.faucet must wait " + to_string(TIMEOUT) + " seconds");
+        check(diff >= USER_COOLDOWN, "eosio.faucet must wait " + to_string(USER_COOLDOWN) + " seconds");
         check(row.counter < MAX_COUNTER_PER_USER, "eosio.faucet address has received the maximum allocation of tokens");
 
         if (it == idx.end() ) row.id = _ratelimit.available_primary_key();

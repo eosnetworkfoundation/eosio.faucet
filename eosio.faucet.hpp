@@ -36,7 +36,7 @@ public:
     const uint32_t TTL_USER_RATE_LIMIT = 86400;         // 24 hours
 
     // Rate limits
-    const uint32_t TIMEOUT = 60;                    // (1 minute) timeout resets user's counter allocation
+    const uint32_t USER_COOLDOWN = 60;              // (1 minute) user cooldown timer per single faucet event
     const uint32_t MAX_COUNTER_PER_USER = 10;       // max rate limit per user counters (resests by TTL_USER_RATE_LIMIT)
     const uint32_t MAX_COUNTER_PER_GLOBAL = 5000;   // max rate limit per global counters (resets by STATS_INTERVAL)
 
